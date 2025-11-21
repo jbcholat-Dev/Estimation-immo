@@ -85,6 +85,7 @@ logs/
 
 # Temporary files
 *.tmp
+*.tmp.*
 *.bak
 grok-mcp/
 FIGMA_CONFIG_INSTRUCTIONS.md

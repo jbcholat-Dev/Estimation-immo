@@ -121,6 +121,29 @@ class SimilarityScorer:
             return 50
 
     @staticmethod
+    def _normalize_property_type(type_str: str) -> str:
+        """
+        Normalise le type de bien DVF+ vers format standard.
+        Ex: "UN APPARTEMENT" → "Appartement", "UNE MAISON" → "Maison"
+        """
+        if not type_str:
+            return "Inconnu"
+
+        type_str = type_str.strip().upper()
+
+        # Mapping DVF+ → standard
+        if "APPARTEMENT" in type_str:
+            return "Appartement"
+        elif "MAISON" in type_str:
+            return "Maison"
+        elif "STUDIO" in type_str:
+            return "Studio"
+        elif "TERRAIN" in type_str:
+            return "Terrain"
+        else:
+            return type_str.title()
+
+    @staticmethod
     def calculate_comparable_score(
         target_latitude: float,
         target_longitude: float,
@@ -135,29 +158,41 @@ class SimilarityScorer:
             target_latitude, target_longitude: Coordonnées du bien cible
             target_surface: Surface du bien cible en m²
             target_type: Type du bien cible
-            comparable: Dict avec keys: latitude, longitude, sbati, libnatmut, datemut
+            comparable: Dict avec keys: latitude, longitude, sbati, libtypbien, datemut
 
         Returns:
             Score 0-100
         """
         try:
+            # Convertir tous les valeurs Decimal en float
+            def to_float(val):
+                """Convertit Decimal ou autre type en float"""
+                from decimal import Decimal
+                if isinstance(val, Decimal):
+                    return float(val)
+                return float(val) if val is not None else 0
+
             # Distance
             distance_km = SimilarityScorer.haversine_distance(
-                target_latitude, target_longitude,
-                comparable.get("latitude"), comparable.get("longitude")
+                to_float(target_latitude),
+                to_float(target_longitude),
+                to_float(comparable.get("latitude")),
+                to_float(comparable.get("longitude"))
             )
             distance_score = SimilarityScorer.score_distance(distance_km)
 
             # Surface
             surface_score = SimilarityScorer.score_surface(
-                target_surface,
-                comparable.get("sbati", 0)
+                to_float(target_surface),
+                to_float(comparable.get("sbati", 0))
             )
 
-            # Type
+            # Type - normalize DVF+ type to standard format
+            comparable_type_raw = comparable.get("libtypbien", "Inconnu")
+            comparable_type_normalized = SimilarityScorer._normalize_property_type(comparable_type_raw)
             type_score = SimilarityScorer.score_type(
                 target_type,
-                comparable.get("libnatmut", "Inconnu")
+                comparable_type_normalized
             )
 
             # Ancienneté
@@ -500,7 +535,7 @@ class EstimationAlgorithm:
             target_longitude: Longitude du bien cible
             target_surface: Surface m² du bien cible
             target_type: Type du bien cible (Appartement, Maison, etc.)
-            comparables: Liste de comparables (dict avec keys: latitude, longitude, sbati, libnatmut, datemut, valeurfonc)
+            comparables: Liste de comparables (dict avec keys: latitude, longitude, sbati, libtypbien, datemut, valeurfonc)
 
         Returns:
             Dict complet avec estimation, fiabilité, prix au m², etc.
@@ -560,6 +595,9 @@ class EstimationAlgorithm:
                 "fiabilite": confidence,
                 "nb_comparables_utilises": estimation["nb_comparables_utilises"],
                 "comparables_summary": self._comparables_summary(comparables_scored),
+                "comparables_with_scores": [
+                    {**c, "score": s} for c, s in comparables_scored
+                ],
                 "timestamp": datetime.now().isoformat()
             }
         except Exception as e:
@@ -572,7 +610,7 @@ class EstimationAlgorithm:
     def _comparables_summary(self, comparables_scored: List[Tuple[Dict, float]]) -> Dict:
         """Résumé statistique des comparables"""
         try:
-            valides = [(c, s) for c, s in comparables_scored if s >= 70]
+            valides = [(c, s) for c, s in comparables_scored if s >= 40]
             if not valides:
                 return {}
 

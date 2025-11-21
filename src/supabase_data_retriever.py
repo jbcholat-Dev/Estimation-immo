@@ -10,8 +10,12 @@ from typing import List, Dict, Optional
 import pandas as pd
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
+from pyproj import Transformer
 
 load_dotenv()
+
+# Initialize Lambert93 to WGS84 transformer globally
+_TRANSFORMER_2154_4326 = Transformer.from_crs('EPSG:2154', 'EPSG:4326')
 
 
 class SupabaseDataRetriever:
@@ -51,12 +55,13 @@ class SupabaseDataRetriever:
             limit: Nombre maximal de résultats
 
         Returns:
-            DataFrame avec colonnes: idmutation, datemut, valeurfonc, sbati, distance_km, libnatmut
+            DataFrame avec colonnes: idmutation, datemut, valeurfonc, sbati, distance_km, libtypbien
         """
 
         try:
             with self.engine.connect() as conn:
-                # Requête de base sur les mutations (version simplifiée)
+                # Requête basée sur le schéma DVF+ réel (dvf_plus_2025_2.dvf_plus_mutation)
+                # geomlocmut est en Lambert 93 (EPSG:2154), utilise ST_AsText pour parsing
                 query = text("""
                     SELECT
                         idmutation,
@@ -64,23 +69,40 @@ class SupabaseDataRetriever:
                         valeurfonc,
                         sbati,
                         coddep,
-                        libnatmut,
+                        libtypbien,
                         nblocmut,
-                        latitude,
-                        longitude
-                    FROM dvf.mutations_complete
+                        ST_AsText(geomlocmut) as geom_text
+                    FROM dvf_plus_2025_2.dvf_plus_mutation
                     WHERE sbati >= :surface_min
                       AND sbati <= :surface_max
                       AND valeurfonc > 0
                       AND datemut IS NOT NULL
+                      AND geomlocmut IS NOT NULL
+                      AND datemut >= CURRENT_DATE - (:annees * 365)::integer * INTERVAL '1 day'
+                      AND (libtypbien LIKE :type_pattern OR libtypbien LIKE :type_pattern2)
                     ORDER BY datemut DESC
                     LIMIT :limit
                 """)
 
+                # Build type filter patterns
+                type_patterns = {
+                    "Appartement": ("%APPARTEMENT%", "%STUDIO%"),
+                    "Maison": ("%MAISON%", "%VILLA%"),
+                    "Terrain": ("%TERRAIN%", "%PARCELLE%")
+                }
+
+                if type_bien in type_patterns:
+                    type_pattern, type_pattern2 = type_patterns[type_bien]
+                else:
+                    type_pattern, type_pattern2 = ("%", "%")
+
                 result = conn.execute(query, {
                     'surface_min': surface_min,
                     'surface_max': surface_max,
-                    'limit': limit
+                    'limit': limit,
+                    'annees': annees,
+                    'type_pattern': type_pattern,
+                    'type_pattern2': type_pattern2
                 })
 
                 rows = result.fetchall()
@@ -89,20 +111,96 @@ class SupabaseDataRetriever:
                 df = pd.DataFrame(rows, columns=columns)
 
                 if len(df) > 0:
-                    # Calculer distance simple (Haversine)
+                    # Convertir TOUTES les colonnes Decimal en float
+                    from decimal import Decimal
+                    for col in df.columns:
+                        if col not in ['idmutation', 'coddep', 'libtypbien', 'geom_text', 'datemut']:
+                            try:
+                                # Convert Decimal and numeric types to float
+                                df[col] = df[col].apply(lambda x: float(x) if x is not None else None)
+                            except:
+                                pass  # Laisser les colonnes non-numériques
+
+                    # Parser "POINT(X Y)" de ST_AsText et convertir Lambert 93 → WGS84
+                    import re
+                    def parse_and_convert(geom_text):
+                        """Parse POINT geometry et convertit Lambert93→WGS84"""
+                        try:
+                            match = re.search(r'POINT\(([\d.]+)\s+([\d.]+)\)', geom_text)
+                            if match:
+                                x_lambert = float(match.group(1))
+                                y_lambert = float(match.group(2))
+                                lat, lon = self._lambert93_to_wgs84_simple(x_lambert, y_lambert)
+                                return lat, lon
+                        except:
+                            pass
+                        return None, None
+
+                    df[['latitude', 'longitude']] = df['geom_text'].apply(
+                        lambda x: pd.Series(parse_and_convert(x))
+                    )
+
+                    # Filtrer les lignes où conversion a échoué
+                    df = df.dropna(subset=['latitude'])
+
+                    # Convertir Decimal à float pour coordonnées
+                    for col in ['latitude', 'longitude']:
+                        if col in df.columns:
+                            df[col] = df[col].astype(float)
+
+                    # Calculer distance Haversine avec coordonnées WGS84
                     df['distance_km'] = df.apply(
-                        lambda row: self._haversine_distance(latitude, longitude, 46.0, 6.5),
+                        lambda row: self._haversine_distance(latitude, longitude, row['latitude'], row['longitude']),
                         axis=1
                     )
 
                     # Trier par distance
-                    df = df.sort_values('distance_km')
+                    df = df.sort_values('distance_km').reset_index(drop=True)
+
+                    # Formatter la date
+                    if 'datemut' in df.columns:
+                        df['datemut'] = pd.to_datetime(df['datemut']).dt.strftime('%d/%m/%Y')
+
+                    # Calculer prix au m²
+                    df['prix_m2'] = df['valeurfonc'] / df['sbati']
+
+                    # Ajouter adresses via reverse geocoding
+                    try:
+                        from src.utils.geocoding import reverse_geocode
+                        addresses = []
+                        for idx, row in df.iterrows():
+                            addr = reverse_geocode(row['latitude'], row['longitude'])
+                            addresses.append(addr if addr else f"({row['latitude']:.4f}, {row['longitude']:.4f})")
+                        df['adresse'] = addresses
+                    except Exception as e:
+                        print(f"[WARNING] Erreur reverse geocoding: {e}")
+                        # Fallback: utiliser coordonnées
+                        df['adresse'] = df.apply(
+                            lambda row: f"({row['latitude']:.4f}, {row['longitude']:.4f})",
+                            axis=1
+                        )
 
                 return df
 
         except Exception as e:
-            print(f"❌ Erreur get_comparables: {e}")
+            print(f"[ERROR] Erreur get_comparables: {e}")
             return pd.DataFrame()
+
+    def _lambert93_to_wgs84_simple(self, x: float, y: float) -> tuple:
+        """
+        Convertit coordonnées Lambert 93 (EPSG:2154) → WGS84 (EPSG:4326)
+        Utilise pyproj pour une conversion exacte
+        """
+        try:
+            lat, lon = _TRANSFORMER_2154_4326.transform(x, y)
+            return (lat, lon)
+        except Exception as e:
+            logger.error(f"[ERROR] Conversion Lambert93: {str(e)}")
+            return (None, None)
+
+    def _lambert93_to_wgs84(self, x: float, y: float) -> tuple:
+        """Alias pour compatibilité"""
+        return self._lambert93_to_wgs84_simple(x, y)
 
     def _haversine_distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         """
@@ -143,7 +241,7 @@ class SupabaseDataRetriever:
                         AVG(sbati) as surface_moyenne,
                         MIN(datemut) as date_premiere_vente,
                         MAX(datemut) as date_derniere_vente
-                    FROM dvf.mutations
+                    FROM dvf_plus_2025_2.dvf_plus_mutation
                     WHERE coddep LIKE :code_postal
                 """)
 
@@ -163,7 +261,7 @@ class SupabaseDataRetriever:
                     return {}
 
         except Exception as e:
-            print(f"❌ Erreur get_market_stats: {e}")
+            print(f"[ERROR] Erreur get_market_stats: {e}")
             return {}
 
     def test_connection(self) -> bool:
@@ -171,12 +269,12 @@ class SupabaseDataRetriever:
 
         try:
             with self.engine.connect() as conn:
-                result = conn.execute(text("SELECT COUNT(*) FROM dvf.mutations"))
+                result = conn.execute(text("SELECT COUNT(*) FROM dvf_plus_2025_2.dvf_plus_mutation"))
                 count = result.scalar()
-                print(f"✅ Connexion OK - {count} mutations dans Supabase")
+                print(f"[OK] Connexion OK - {count} mutations dans Supabase")
                 return True
         except Exception as e:
-            print(f"❌ Erreur connexion: {e}")
+            print(f"[ERROR] Erreur connexion: {e}")
             return False
 
 
@@ -186,7 +284,7 @@ if __name__ == "__main__":
     retriever.test_connection()
 
     # Test get_comparables
-    print("\n📍 Recherche comparables pour Thonon-les-Bains (Appartement 50-100m²)...")
+    print("\n[INFO] Recherche comparables pour Thonon-les-Bains (Appartement 50-100m2)...")
     comparables = retriever.get_comparables(
         latitude=46.3719,
         longitude=6.4727,
@@ -197,13 +295,13 @@ if __name__ == "__main__":
     )
 
     if len(comparables) > 0:
-        print(f"\n✅ Trouvé {len(comparables)} comparables:")
+        print(f"\n[OK] Trouve {len(comparables)} comparables:")
         print(comparables[['idmutation', 'datemut', 'valeurfonc', 'sbati', 'distance_km']].head())
     else:
-        print("\n⚠️  Aucun comparable trouvé")
+        print("\n[WARNING] Aucun comparable trouve")
 
     # Test get_market_stats
-    print("\n📊 Statistiques Thonon-les-Bains...")
+    print("\n[INFO] Statistiques Thonon-les-Bains...")
     stats = retriever.get_market_stats('74200')
     if stats:
         print(f"   Transactions: {stats.get('nb_transactions', 0)}")
