@@ -13,7 +13,7 @@ except ImportError:
     exit(1)
 
 
-NOTION_TOKEN = "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"
+NOTION_TOKEN = os.getenv("NOTION_TOKEN", "")
 PAGE_URL = "https://www.notion.so/Automatisation-des-estimations-2fc6cfd339504d1bbf444c0ae078ff5c"
 # Extraction de l'ID de page depuis l'URL
 PAGE_ID = "2fc6cfd339504d1bbf444c0ae078ff5c"

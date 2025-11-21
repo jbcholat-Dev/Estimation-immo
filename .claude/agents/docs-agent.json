@@ -9,7 +9,7 @@
         "@notionhq/notion-mcp-server"
       ],
       "env": {
-        "NOTION_TOKEN": "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"
+        "NOTION_TOKEN": "${NOTION_TOKEN}"
       }
     }
   },
