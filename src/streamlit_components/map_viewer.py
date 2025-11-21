@@ -133,27 +133,3 @@ def render_map_viewer(
 
     # Afficher carte
     st_folium(m, width=1200, height=500)
-
-    st.markdown("---")
-
-    # === STATS SPATIAUX ===
-    st.markdown("### 📊 Statistiques spatiales")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        if 'distance_km' in comparables_df.columns:
-            dist_mean = comparables_df['distance_km'].mean()
-            dist_min = comparables_df['distance_km'].min()
-            st.metric(
-                "Distance moy/min (km)",
-                f"{dist_mean:.1f} / {dist_min:.1f}"
-            )
-
-    with col2:
-        if 'score' in comparables_df.columns:
-            score_mean = comparables_df['score'].mean()
-            st.metric("Score moyen", f"{score_mean:.0f}")
-
-    with col3:
-        st.metric("Nb comparables", len(comparables_df))

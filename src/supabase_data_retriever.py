@@ -61,7 +61,8 @@ class SupabaseDataRetriever:
         try:
             with self.engine.connect() as conn:
                 # Requête basée sur le schéma DVF+ réel (dvf_plus_2025_2.dvf_plus_mutation)
-                # geomlocmut est en Lambert 93 (EPSG:2154), utilise ST_AsText pour parsing
+                # geomlocmut est en Lambert 93 (EPSG:2154)
+                # Utilise ST_DWithin pour filtrer par distance AVANT le LIMIT
                 query = text("""
                     SELECT
                         idmutation,
@@ -71,6 +72,8 @@ class SupabaseDataRetriever:
                         coddep,
                         libtypbien,
                         nblocmut,
+                        nbmai1pp, nbmai2pp, nbmai3pp, nbmai4pp, nbmai5pp,
+                        nbapt1pp, nbapt2pp, nbapt3pp, nbapt4pp, nbapt5pp,
                         ST_AsText(geomlocmut) as geom_text
                     FROM dvf_plus_2025_2.dvf_plus_mutation
                     WHERE sbati >= :surface_min
@@ -80,6 +83,11 @@ class SupabaseDataRetriever:
                       AND geomlocmut IS NOT NULL
                       AND datemut >= CURRENT_DATE - (:annees * 365)::integer * INTERVAL '1 day'
                       AND (libtypbien LIKE :type_pattern OR libtypbien LIKE :type_pattern2)
+                      AND ST_DWithin(
+                        ST_Transform(geomlocmut, 4326)::geography,
+                        ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
+                        :rayon_m
+                      )
                     ORDER BY datemut DESC
                     LIMIT :limit
                 """)
@@ -102,8 +110,12 @@ class SupabaseDataRetriever:
                     'limit': limit,
                     'annees': annees,
                     'type_pattern': type_pattern,
-                    'type_pattern2': type_pattern2
+                    'type_pattern2': type_pattern2,
+                    'latitude': latitude,
+                    'longitude': longitude,
+                    'rayon_m': rayon_km * 1000  # Convertir km en mètres
                 })
+
 
                 rows = result.fetchall()
                 columns = result.keys()

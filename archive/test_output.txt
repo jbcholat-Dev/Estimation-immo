@@ -1,0 +1,42 @@
+﻿======================================================================
+DIAGNOSTIC: ProblΦme de filtrage gΘographique DVF
+======================================================================
+
+1. CoordonnΘes de Thollon-les-MΘmises: 46.3907, 6.697
+
+2. Test: Maisons 128-192m▓ dans toute la base (3 derniΦres annΘes)
+   Total: 389 maisons
+
+3. Test: Avec ST_DWithin (rayon 5km autour de Thollon)
+   Total: 16 maisons
+
+4. Test: RΘcupΘrer 10 maisons les plus proches de Thollon
+   Surface | Prix      | Date       | Distance
+   --------|-----------|------------|----------
+      160m▓ |   634,850Ç | 2024-12-30 |   0.40 km
+      160m▓ |   595,300Ç | 2023-10-14 |   1.67 km
+      130m▓ |   473,250Ç | 2023-02-22 |   1.69 km
+      148m▓ |   707,500Ç | 2024-01-12 |   1.78 km
+      184m▓ |   584,650Ç | 2025-01-17 |   1.79 km
+      150m▓ |   544,000Ç | 2023-09-29 |   1.91 km
+      135m▓ |   515,000Ç | 2023-08-22 |   2.13 km
+      140m▓ |   585,000Ç | 2025-05-06 |   2.19 km
+      141m▓ |   386,620Ç | 2023-01-16 |   2.46 km
+      142m▓ |   570,000Ç | 2024-08-12 |   2.47 km
+
+5. Test: Via get_comparables() (rayon 5km)
+   RΘsultats: 16 comparables
+
+   Premiers rΘsultats:
+                                             adresse  ...  valeurfonc
+0  163 Imp. des Vernes, 74500 Thollon-les-MΘmises...  ...    634850.0
+1     6067 All. du ChΓtaignier, 74500 Lugrin, France  ...    595300.0
+2         21 Chem. des Cheymes, 74500 Lugrin, France  ...    473250.0
+3    20 Rte du Bois de Manjoux, 74500 Lugrin, France  ...    707500.0
+4        215 Chem. des Cheymes, 74500 Lugrin, France  ...    584650.0
+
+[5 rows x 4 columns]
+
+======================================================================
+FIN DU DIAGNOSTIC
+======================================================================

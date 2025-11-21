@@ -1,0 +1,37 @@
+﻿======================================================================
+SIMULATION EXACTE DE L'APPLICATION STREAMLIT
+======================================================================
+
+1. GΘocodage de: 177 Rte de Leucy, 74500 Thollon-les-MΘmises, France
+   RΘsultat: 177 Rte de Leucy, 74500 Thollon-les-MΘmises, France
+   Latitude: 46.3913324
+   Longitude: 6.7024341
+
+2. RΘcupΘration comparables avec:
+   - Surface: 128 - 192 m▓
+   - Rayon: 3 km
+   - Type: Maison
+
+3. RΘsultats: 10 comparables trouvΘs
+
+   Premiers rΘsultats:
+                                             adresse  ...  valeurfonc
+0  163 Imp. des Vernes, 74500 Thollon-les-MΘmises...  ...    634850.0
+1     6067 All. du ChΓtaignier, 74500 Lugrin, France  ...    595300.0
+2    20 Rte du Bois de Manjoux, 74500 Lugrin, France  ...    707500.0
+3         21 Chem. des Cheymes, 74500 Lugrin, France  ...    473250.0
+4     4 Rte du Bois de Manjoux, 74500 Lugrin, France  ...    544000.0
+5        215 Chem. des Cheymes, 74500 Lugrin, France  ...    584650.0
+6            21 Rte de Thollon, 74500 Lugrin, France  ...    515000.0
+7          35 Imp. des Vergers, 74500 Lugrin, France  ...    585000.0
+8                11 Rte de Rys, 74500 Lugrin, France  ...    386620.0
+9        3 Rte des PrΘs Parrau, 74500 Lugrin, France  ...    570000.0
+
+[10 rows x 4 columns]
+
+   Comparables α Thollon-les-MΘmises: 2
+                                             adresse  distance_km  sbati
+0  163 Imp. des Vernes, 74500 Thollon-les-MΘmises...     0.344257  160.0
+6            21 Rte de Thollon, 74500 Lugrin, France     2.476580  135.0
+
+======================================================================

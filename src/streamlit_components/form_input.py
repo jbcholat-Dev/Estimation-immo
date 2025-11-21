@@ -27,7 +27,7 @@ def render_form_input(sidebar: bool = True) -> Optional[Dict]:
     if sidebar:
         container = st.sidebar
     else:
-        container = st
+        container = st.container()
 
     with container:
         st.markdown("### 🏠 Saisir le bien à estimer")
@@ -65,6 +65,50 @@ def render_form_input(sidebar: bool = True) -> Optional[Dict]:
             step=1,
             help="Nombre de pièces principales (optionnel)"
         )
+
+        # DPE
+        dpe = st.selectbox(
+            "Diagnostic de Performance Énergétique (DPE)",
+            options=["A", "B", "C", "D", "E", "F", "G"],
+            index=3, # Default D
+            help="Lettre du DPE (A = très performant, G = passoire thermique)"
+        )
+
+        # Coefficient d'environnement
+        # On utilise un slider de -20% à +20% ou une échelle qualitative ?
+        # Le user a demandé "Coefficient", on va proposer une échelle qualitative qui mappe vers un float
+        env_options = {
+            "Exceptionnel (+20%)": 1.20,
+            "Très bon (+10%)": 1.10,
+            "Standard (0%)": 1.00,
+            "Moyen (-10%)": 0.90,
+            "Mauvais (-20%)": 0.80
+        }
+        env_label = st.selectbox(
+            "Qualité de l'environnement",
+            options=list(env_options.keys()),
+            index=2, # Standard
+            help="Impact de l'environnement sur la valeur"
+        )
+        coeff_env = env_options[env_label]
+
+        # Coefficient de vétusté
+        # Idem, échelle qualitative
+        vetuste_options = {
+            "Neuf / Refait à neuf (1.0)": 1.0,
+            "Très bon état (0.9)": 0.9,
+            "Bon état (0.8)": 0.8,
+            "À rafraîchir (0.7)": 0.7,
+            "Travaux à prévoir (0.6)": 0.6,
+            "Rénovation totale (0.5)": 0.5
+        }
+        vetuste_label = st.selectbox(
+            "État général / Vétusté",
+            options=list(vetuste_options.keys()),
+            index=2, # Bon état
+            help="État général du bien"
+        )
+        coeff_vetuste = vetuste_options[vetuste_label]
 
         st.markdown("---")
 
@@ -159,6 +203,9 @@ def render_form_input(sidebar: bool = True) -> Optional[Dict]:
                 'pieces': pieces,
                 'latitude': geocoded_result['latitude'],
                 'longitude': geocoded_result['longitude'],
+                'dpe': dpe,
+                'coeff_environnement': coeff_env,
+                'coeff_vetuste': coeff_vetuste
             }
 
             return {
@@ -168,6 +215,9 @@ def render_form_input(sidebar: bool = True) -> Optional[Dict]:
                 "pieces": pieces,
                 "latitude": geocoded_result['latitude'],
                 "longitude": geocoded_result['longitude'],
+                "dpe": dpe,
+                "coeff_environnement": coeff_env,
+                "coeff_vetuste": coeff_vetuste
             }
 
         return None
