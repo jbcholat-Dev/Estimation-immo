@@ -95,7 +95,13 @@ with tab1:
         st.error(f"Erreur dans EPIC 1: {e}")
 
 with tab2:
-    st.info("🚧 EPIC 2 : Comparables en Vente (Perplexity) - À venir")
+    try:
+        from src.ui import epic_2_perplexity
+        epic_2_perplexity.render()
+    except ImportError:
+        st.info("Module EPIC 2 en cours de construction...")
+    except Exception as e:
+        st.error(f"Erreur dans EPIC 2: {e}")
 
 with tab3:
     st.info("🚧 EPIC 3 : Méthode Additionnelle (Maisons) - À venir")

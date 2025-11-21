@@ -25,6 +25,9 @@ class Config:
     # Google Maps
     GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "")
 
+    # Perplexity API
+    PERPLEXITY_API_KEY: str = os.getenv("PERPLEXITY_API_KEY", "")
+
     # Streamlit
     STREAMLIT_SERVER_PORT: int = int(os.getenv("STREAMLIT_SERVER_PORT", "8501"))
 
@@ -39,6 +42,7 @@ class Config:
             ("SUPABASE_URL", cls.SUPABASE_URL),
             ("SUPABASE_DB_PASSWORD", cls.SUPABASE_DB_PASSWORD),
             ("GOOGLE_MAPS_API_KEY", cls.GOOGLE_MAPS_API_KEY),
+            ("PERPLEXITY_API_KEY", cls.PERPLEXITY_API_KEY),
         ]
 
         missing = [name for name, value in required if not value]
