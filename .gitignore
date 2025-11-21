@@ -61,6 +61,7 @@ data/
 *.xls
 *.json
 !docs/fixtures/
+!.claude/agents/*.json
 
 # Environment variables
 .env
