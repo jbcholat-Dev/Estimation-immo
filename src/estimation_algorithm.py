@@ -96,7 +96,8 @@ class SimilarityScorer:
         """
         try:
             if isinstance(date_mutation, str):
-                date_mutation = datetime.strptime(date_mutation, "%Y-%m-%d")
+                # Supporte format FR (JJ/MM/AAAA) ou ISO
+                date_mutation = pd.to_datetime(date_mutation, dayfirst=True)
 
             # Convertir date en datetime si nécessaire
             if hasattr(date_mutation, 'date'):
@@ -393,7 +394,7 @@ class ConfidenceCalculator:
             try:
                 date_mut = c.get("datemut")
                 if isinstance(date_mut, str):
-                    date_mut = datetime.strptime(date_mut, "%Y-%m-%d")
+                    date_mut = pd.to_datetime(date_mut, dayfirst=True)
                 mois_ecoulis = (datetime.now() - date_mut).days / 30.44
                 dates_list.append(mois_ecoulis)
             except:
@@ -477,7 +478,7 @@ class TemporalAdjuster:
 
         try:
             if isinstance(date_comparable, str):
-                date_comparable = datetime.strptime(date_comparable, "%Y-%m-%d")
+                date_comparable = pd.to_datetime(date_comparable, dayfirst=True)
 
             # Calculer nombre d'années
             delta_jours = (date_reference - date_comparable).days

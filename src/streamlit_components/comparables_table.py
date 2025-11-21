@@ -180,9 +180,10 @@ def render_comparables_table(
     }
     if 'score' in df_display.columns:
         col_config['score'] = st.column_config.NumberColumn(
-            "Similarité",
+            "Score",
             format="%.0f",
-            width="small"
+            width="small",
+            help="Score de similarité (0-100)"
         )
     if 'adresse' in df_display.columns:
         col_config['adresse'] = st.column_config.TextColumn("Adresse", width="large")
@@ -222,12 +223,7 @@ def render_comparables_table(
             width="small",
             help="Nombre de pièces principales (estimé)"
         )
-    if 'score' in df_display.columns:
-        col_config['score'] = st.column_config.NumberColumn(
-            "Similarité",
-            format="%.0f",
-            width="small"
-        )
+
     if 'distance_km' in df_display.columns:
         col_config['distance_km'] = st.column_config.NumberColumn(
             "Distance (km)",

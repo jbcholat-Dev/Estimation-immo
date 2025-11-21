@@ -32,14 +32,20 @@ Objectif : Réduire le temps d'estimation de **50%** (4-6h → 2-3h).
 ### Phase 4 : Interface Streamlit MVP ✅ COMPLÈTE
 - ✅ **EPIC 1** : Comparables DVF+ (USER_STORIES US_001-US_007)
   - Formulaire sidebar (adresse, DPE, environnement, vétusté)
-  - Tableau comparables avec sélection
-  - Carte interactive Folium
+  - Tableau comparables avec sélection et filtrage dynamique
+  - Carte interactive Folium synchronisée avec la sélection
+  - Street View interactif intégré
   - Export PDF
   - Prix ajustés (inflation/taux)
 
 ### Phase 5 : Tests & Validation 🔄 EN COURS (22/39 passing)
 - 39 tests définis, 22 passing
 - Ready for UAT (User Acceptance Testing)
+
+### Phase 6 : EPIC 2 (Analyse Offre Actuelle) ⏳ À FAIRE
+- Intégration Perplexity API
+- Recherche listings actifs (SeLoger, Leboncoin...)
+- Analyse concurrentielle
 
 ---
 
